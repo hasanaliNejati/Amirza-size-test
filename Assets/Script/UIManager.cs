@@ -12,7 +12,8 @@ public class UIManager : MonoBehaviour
     [Header("Size")]
     public float maxSize = 1;
     public float minSize = 0.3f;
-    public float sizeRation = 10;
+    public float maxHeight = 10;
+    public float maxWidth = 10;
     [Header("Column")]
     public List<int> breakCounts = new List<int>();
     List<Item> items = new List<Item>();
@@ -34,9 +35,10 @@ public class UIManager : MonoBehaviour
 
     public void CalculateSizeAndPos()
     {
-        float GetSize(int rowCount)
+        float GetSize(int rowCount,float max)
         {
-            return Mathf.Clamp(sizeRation / rowCount, minSize, maxSize);
+            float heigth = Mathf.Clamp(max / rowCount, minSize, maxSize);
+            return heigth;
         }
         int getColumnCount(int itemCount)
         {
@@ -57,23 +59,54 @@ public class UIManager : MonoBehaviour
         }
 
 
-        SortItems();
+        //SortItems();
         int columnCount = getColumnCount(items.Count);
-        int rowCount = (items.Count + 1) / columnCount;
-        float scale = GetSize(rowCount);
+        int rowCount = (items.Count) / columnCount;
+        if (items.Count % columnCount != 0)
+            rowCount += 1;
+        float scale = GetSize(rowCount,maxHeight);
         int coulumnIndex = 0;
+
+        int maxWidthInColumn = 0;
+        int sumWidthAllColumn = 0;
         for (int i = 0; i < items.Count; i++)
         {
-            if (i != 0 && (i % rowCount) == 0)
+            if ((i != 0 && (i % rowCount) == 0))
             {
-                if(coulumnIndex + 1 < columns.Count)
-                coulumnIndex++;
+                if (coulumnIndex + 1 < columns.Count)
+                    coulumnIndex++;
+                
             }
+
+            if (items[i].count > maxWidthInColumn)
+                maxWidthInColumn = items[i].count;
             print("count" + columnCount);
             print("index" + coulumnIndex);
             items[i].transform.parent = columns[coulumnIndex];
-            items[i].SetSize(scale);
+
+            if ((i % rowCount) == 0 || i == items.Count - 1)
+            {
+                sumWidthAllColumn += maxWidthInColumn;
+                maxWidthInColumn = 0;
+            }
         }
+        float scaleWidth = GetSize(sumWidthAllColumn,maxWidth);
+        if (scaleWidth < scale)
+        {
+            scale = scaleWidth;
+        }
+        foreach (var item in items)
+        {
+            item.SetSize(scale);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(item.GetComponent<RectTransform>());
+
+        }
+
+        foreach (var item in columns)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(item.GetComponent<RectTransform>());
+        }
+        
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(GetComponent<RectTransform>());
 
